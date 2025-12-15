@@ -1,0 +1,39 @@
+# --- paths ---
+LEDGER=/home/sol/rox/rox-ledger
+SECRETS=/home/sol/rox/secrets
+IDENTITY=/home/sol/rox/secrets/validator-identity.json
+VOTE=/home/sol/rox/secrets/validator-vote.json
+STAKE=/home/sol/rox/secrets/validator-stake.json
+PRIMORDIAL=/home/sol/rox/secrets/accounts.yaml
+WITHDRAWER=/home/sol/rox/secrets/withdrawer.json
+FAUCET=/home/sol/rox/secrets/faucet.json
+SOLANA_BIN=/home/sol/rox/bin
+
+# --- networking (this node) ---
+PUBLIC_IP=xxxxxxxxxxxx
+RPC_HOST=0.0.0.0
+RPC_PORT=8899
+GOSSIP_PORT=8001
+
+# --- genesis funding (lamports) ---
+# 1 SOL == 1_000_000_000 lamports
+BOOTSTRAP_LAMPORTS=5000000000000        # 5,000 SOL
+BOOTSTRAP_STAKE_LAMPORTS=2000000000000  # 2,000 SOL
+FAUCET_LAMPORTS=1          
+
+# --- ledger mgmt ---
+LEDGER_SHREDS_LIMIT=50000000
+WIPE_LEDGER=1
+ALLOW_LEDGER_PURGE=1
+
+# --- required for ExecStart on V1 ---
+GOSSIP_HOST=xxxxxxxxxxxx
+FAUCET_ADDR=xxxxxxxxxxxxxxx
+# If you use --dynamic-port-range in the unit, define DYN_RANGE; otherwise you can skip it or remove the flag.
+DYN_RANGE=8000-8020
+
+# --- required by ExecStart on V1 (bootstrap) ---
+GOSSIP_HOST=148.251.132.7
+FAUCET_ADDR=127.0.0.1:9900
+# define only if you actually pass --dynamic-port-range in ExecStart
+DYN_RANGE=8000-8020

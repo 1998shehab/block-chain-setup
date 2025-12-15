@@ -1,0 +1,45 @@
+[Unit]
+Description=ROX Archive RPC Node (non‑voting)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=sol
+Group=sol
+WorkingDirectory=/home/sol/rox
+EnvironmentFile=/etc/rox-archive.env
+ExecStartPre=/usr/local/bin/rox-prepare-join.sh
+ExecStart=/home/sol/rox/bin/solana-validator \
+  --identity ${IDENTITY} \
+  --ledger ${LEDGER} \
+  --accounts ${ACCOUNTS} \
+  --snapshots ${SNAPSHOTS} \
+  --gossip-host ${PUBLIC_IP} \
+  --entrypoint ${ENTRYPOINT_1} \
+  --entrypoint ${ENTRYPOINT_2} \
+  --entrypoint ${ENTRYPOINT_3} \
+  --expected-genesis-hash ${EXPECTED_GENESIS_HASH} \
+  --known-validator ${KNOWN_VALIDATOR} \
+  --known-validator ${KNOWN_VALIDATOR_2} \
+  --known-validator ${KNOWN_VALIDATOR_3} \
+  --gossip-port ${GOSSIP_PORT} \
+  --rpc-bind-address ${RPC_HOST} \
+  --rpc-port ${RPC_PORT} \
+  --public-rpc-address ${PUBLIC_IP}:${RPC_PORT} \
+  --enable-rpc-transaction-history \
+  --full-rpc-api \
+  --no-voting \
+  --full-snapshot-interval-slots 200 \
+  --incremental-snapshot-interval-slots 100 \
+  --dynamic-port-range 8022-8040 \
+  --maximum-local-snapshot-age 500 \
+  --use-snapshot-archives-at-startup always \
+  --maximum-snapshot-download-abort 10 \
+  --minimal-snapshot-download-speed 5242880
+
+Restart=always
+RestartSec=2
+LimitNOFILE=1000000
+
+[Install]
+WantedBy=multi-user.target

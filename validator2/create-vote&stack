@@ -1,0 +1,32 @@
+BIN=/home/sol/rox/bin
+URL=http://148.251.132.7:8899
+ID_KP=/home/sol/rox/secrets/validator-identity.json
+VOTE_KP=/home/sol/rox/secrets/validator-vote.json
+STAKE_KP=/home/sol/rox/secrets/validator-stake.json
+WDR_KP=/home/sol/rox/secrets/withdrawer.json
+
+ID_PUB=$($BIN/solana-keygen pubkey "$ID_KP")
+WDR_PUB=$($BIN/solana-keygen pubkey "$WDR_KP")
+VOTE_PUB=$($BIN/solana-keygen pubkey "$VOTE_KP")
+
+# (a) fund identity (airdrop comes from V1 faucet created at genesis)
+$BIN/solana --url $URL airdrop 500 "$ID_PUB"
+
+# (b) create vote account (CLI expects identity keypair path + withdrawer pubkey)
+$BIN/solana --url $URL create-vote-account \
+  "$VOTE_KP" \
+  "$ID_KP" \
+  "$WDR_PUB" \
+  --authorized-voter "$ID_PUB" \
+  --fee-payer "$ID_KP" \
+  --keypair "$ID_KP"
+
+# (c) create + delegate stake (sign with identity; avoids default-signer mismatch)
+$BIN/solana --url $URL create-stake-account "$STAKE_KP" 2000 \
+  --fee-payer "$ID_KP" \
+  --keypair "$ID_KP"
+
+$BIN/solana --url $URL delegate-stake "$STAKE_KP" "$VOTE_PUB" \
+  --stake-authority "$ID_KP" \
+  --fee-payer "$ID_KP" \
+  --keypair "$ID_KP"

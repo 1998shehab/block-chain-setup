@@ -1,0 +1,44 @@
+BIN=~/rox/bin
+URL=http://148.251.132.7:8899     # v1 RPC
+
+ID_KP=~/rox/secrets/validator-identity.json
+VOTE_KP=~/rox/secrets/validator-vote.json
+STAKE_KP=~/rox/secrets/validator-stake.json
+
+ID_PUB=$($BIN/solana-keygen pubkey "$ID_KP")
+VOTE_PUB=$($BIN/solana-keygen pubkey "$VOTE_KP")
+
+# 1) Check current balance (it's ~100 ROX right now)
+$BIN/solana --url $URL balance "$ID_PUB"
+
+# 2) Fund identity enough for 2000 ROX + fees (airdrop can be split if needed)
+$BIN/solana --url $URL airdrop 1500 "$ID_PUB"
+$BIN/solana --url $URL airdrop 700  "$ID_PUB"
+$BIN/solana --url $URL balance "$ID_PUB"
+
+# 3) (Re)create the vote account (if you already created it successfully, this will error; that’s fine)
+$BIN/solana --url $URL create-vote-account \
+  "$VOTE_KP" \
+  "$ID_KP" \
+  "$($BIN/solana-keygen pubkey ~/rox/secrets/withdrawer.json)" \
+  --authorized-voter "$ID_PUB" \
+  --fee-payer "$ID_KP" \
+  --keypair "$ID_KP" || true
+
+# 4) Create the 2000 ROX stake (paid by identity)
+$BIN/solana --url $URL create-stake-account "$STAKE_KP" 2000 \
+  --fee-payer "$ID_KP" --keypair "$ID_KP"
+
+# 5) Delegate the stake to v3’s vote account
+$BIN/solana --url $URL delegate-stake "$STAKE_KP" "$VOTE_PUB" \
+  --stake-authority "$ID_KP" \
+  --fee-payer "$ID_KP" \
+  --keypair "$ID_KP"
+
+# 6) Verify
+$BIN/solana --url $URL stake-account "$STAKE_KP" | sed -n '1,40p'
+$BIN/solana --url $URL vote-account  "$VOTE_PUB"  | sed -n '1,60p'
+
+# 7) Cluster view (v3 should show public RPC)
+$BIN/solana gossip
+$BIN/solana --url $URL validators | grep -A2 -E '8YdRoH|Identity'

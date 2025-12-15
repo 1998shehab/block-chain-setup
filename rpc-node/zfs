@@ -1,0 +1,82 @@
+systemctl stop rox-archive.service || true
+swapoff -a || true
+
+
+# Try clean export first; if busy, force destroy
+zpool export ledger 2>/dev/null || true
+zpool destroy -f ledger 2>/dev/null || true
+
+zpool export accounts 2>/dev/null || true
+zpool destroy -f accounts 2>/dev/null || true
+
+# NVMe members (partition 4)
+for d in \
+  /dev/disk/by-id/nvme-eui.01000000000000008ce38ee309e75207-part4 \
+  /dev/disk/by-id/nvme-eui.01000000000000008ce38ee309e75185-part4
+do
+  zpool labelclear -f "$d" 2>/dev/null || true
+done
+
+# SATA members (partition 4)
+for d in \
+  /dev/disk/by-id/ata-WDC_WUH722222ALE6L1_1QH79RAX-part4 \
+  /dev/disk/by-id/ata-WDC_WUH722222ALE6L1_1QH79EMX-part4 \
+  /dev/disk/by-id/ata-WDC_WUH722222ALE6L1_1QH7A7PX-part4 \
+  /dev/disk/by-id/ata-WDC_WUH722222ALE6L1_1QH75T8X-part4 \
+  /dev/disk/by-id/ata-WDC_WUH722222ALE6L1_1QH7BRRX-part4 \
+  /dev/disk/by-id/ata-WDC_WUH722222ALE6L1_1QH79B6X-part4 \
+  /dev/disk/by-id/ata-WDC_WUH722222ALE6L1_1QH7A9EX-part4 \
+  /dev/disk/by-id/ata-WDC_WUH722222ALE6L1_1QH7A6MX-part4
+do
+  zpool labelclear -f "$d" 2>/dev/null || true
+done
+
+# Create pool
+zpool create -f \
+  -o ashift=12 \
+  -O atime=off -O compression=lz4 -O xattr=sa -O acltype=posixacl \
+  -O mountpoint=/mnt/solana-accounts \
+  accounts mirror \
+  /dev/disk/by-id/nvme-eui.01000000000000008ce38ee309e75207-part4 \
+  /dev/disk/by-id/nvme-eui.01000000000000008ce38ee309e75185-part4
+
+# Tune for accounts DB
+zfs set recordsize=512K accounts
+zfs set primarycache=all accounts
+zfs set logbias=latency accounts
+
+# Create pool (RAIDZ2 across 8 SATA disks)
+zpool create -f \
+  -o ashift=12 \
+  -O atime=off -O compression=lz4 -O xattr=sa -O acltype=posixacl \
+  -O mountpoint=/mnt/solana-ledger \
+  ledger raidz2 \
+  /dev/disk/by-id/ata-WDC_WUH722222ALE6L1_1QH79RAX-part4 \
+  /dev/disk/by-id/ata-WDC_WUH722222ALE6L1_1QH79EMX-part4 \
+  /dev/disk/by-id/ata-WDC_WUH722222ALE6L1_1QH7A7PX-part4 \
+  /dev/disk/by-id/ata-WDC_WUH722222ALE6L1_1QH75T8X-part4 \
+  /dev/disk/by-id/ata-WDC_WUH722222ALE6L1_1QH7BRRX-part4 \
+  /dev/disk/by-id/ata-WDC_WUH722222ALE6L1_1QH79B6X-part4 \
+  /dev/disk/by-id/ata-WDC_WUH722222ALE6L1_1QH7A9EX-part4 \
+  /dev/disk/by-id/ata-WDC_WUH722222ALE6L1_1QH7A6MX-part4
+
+# Create snapshots dataset with separate mountpoint
+zfs create ledger/snapshots
+zfs set mountpoint=/mnt/solana-snapshots ledger/snapshots
+
+# Tune for big sequential IO (ledger files & archive .tar.zst)
+zfs set recordsize=1M ledger
+zfs set recordsize=1M ledger/snapshots
+zfs set primarycache=metadata ledger
+zfs set primarycache=metadata ledger/snapshots
+zfs set logbias=throughput ledger
+zfs set logbias=throughput ledger/snapshots
+
+# Make sure the sol user owns the paths
+chown -R sol:sol /mnt/solana-accounts /mnt/solana-ledger /mnt/solana-snapshots
+
+# Verify
+zpool status
+zpool list
+zfs list
+

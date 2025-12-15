@@ -1,0 +1,16 @@
+[Unit]
+Description=ROX Faucet (solana-faucet)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=sol
+Group=sol
+WorkingDirectory=/home/sol/rox
+EnvironmentFile=/etc/rox-validator.env
+ExecStart=/bin/bash -lc '/home/sol/rox/bin/solana-faucet --keypair "$FAUCET"'
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

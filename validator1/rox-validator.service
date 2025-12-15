@@ -1,0 +1,33 @@
+[Unit]
+Description=ROX Validator (bootstrap)
+After=network-online.target rox-faucet.service
+Wants=network-online.target rox-faucet.service
+
+[Service]
+User=sol
+Group=sol
+WorkingDirectory=/home/sol/rox
+EnvironmentFile=/etc/rox-validator.env
+ExecStartPre=/usr/local/bin/rox-prepare.sh
+ExecStart=/bin/bash -lc '/home/sol/rox/bin/solana-validator \
+  --identity "$IDENTITY" \
+  --vote-account "$VOTE" \
+  --ledger "$LEDGER" \
+  --gossip-host "$PUBLIC_IP" \
+  --gossip-port "$GOSSIP_PORT" \
+  --rpc-bind-address ${RPC_HOST} \
+  --public-rpc-address ${PUBLIC_IP}:${RPC_PORT} \
+  --rpc-port "$RPC_PORT" \
+ \
+  --rpc-faucet-address 127.0.0.1:9900 \
+  --full-rpc-api \
+  --no-wait-for-vote-to-start-leader \
+  --limit-ledger-size "$LEDGER_SHREDS_LIMIT" \
+  --full-snapshot-interval-slots 20000 \
+  --incremental-snapshot-interval-slots 10000'
+Restart=always
+RestartSec=2
+LimitNOFILE=1000000
+
+[Install]
+WantedBy=multi-user.target
